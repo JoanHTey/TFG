@@ -242,29 +242,23 @@ plt.ylabel("IPR(2)")
 N=10000
 dim=2
 States=np.zeros((N,dim))
-nu=0.2
-InPr=0.1
-ExPr=0.001
+nu=0
+InPr=1
+ExPr=0
 eta=ExPr/InPr
 
-p=0.0001
 gamma=3
 M=1000
-ProbGen=0.1
-Ftime=5000
-rho=np.ones(Ftime)
-rho1=np.ones(Ftime)
-rho2=np.ones(Ftime)
 SaveStates=np.zeros((M,N,dim))
 Prep=10**(-2)
 
 
 
-for j in range(0,dim):
-    for i in range(0,N):
-        States[i,j]=int(random.random()<=ProbGen)
+#for j in range(0,dim):
+   # for i in range(0,N):
+      #  States[i,j]=int(random.random()<=ProbGen)
 
-G1_2=nx.erdos_renyi_graph(N,0.01)
+G1_2=nx.erdos_renyi_graph(N,0.003)
 G2_2=nx.erdos_renyi_graph(N,0.001)
 while nx.is_connected(G1_2)!=True:
       G1_2=nx.erdos_renyi_graph(N,0.003)
@@ -273,39 +267,176 @@ while nx.is_connected(G2_2)!=True:
 
 A_1_2=nx.to_numpy_array(G1_2)
 A_2_2=nx.to_numpy_array(G2_2)
-r = build_supra_contact_matrix(A_1_2, A_2_2, eta, gamma)
+r = build_supra_contact_matrix(A_1_2, A_2_2, eta, 100000)
 
+States=np.zeros((N,dim))
+SaveStates=np.zeros((M,N,dim))
+States_1=np.zeros((N,dim))
+States[0,1]=1
+States[0,0]=1
 t=0
+States_1[:,:]=States[:,:]
+Ftime=100
+rho=np.ones(Ftime)
+rho1=np.ones(Ftime)
+rho2=np.ones(Ftime)
+rhox2=np.ones(Ftime)
+rhox21=np.ones(Ftime)
+rhox22=np.ones(Ftime)
+x=0
+
 while t<Ftime:
+    States[:,:]=States_1[:,:]
+    print(t)
     rho[t]=np.sum(States)/(N*2)
     rho1[t]=np.sum(States[:,0])/N
     rho2[t]=np.sum(States[:,1])/N
-    
+    rhox2[t]=(np.sum(States)/(N*2))**2
+    rhox21[t]=(np.sum(States[:,0])/N)**2
+    rhox22[t]=(np.sum(States[:,1])/N)**2
+
     
     if t<M:
         SaveStates[t,:,:]=States[:,:]
     if t>=M and random.random()<=Prep:
         k=random.randint(0,M)
-        SaveStates[k,:,:]
+        SaveStates[k,:,:]=States[:,:]
     if rho[t]==0:
-        k=random.randint(0,M)
-        States[:,:]=SaveStates[k,:,:]
-
-   
+        while x==0:
+            k=random.randint(0,M)
+            if np.sum(SaveStates[k,:,:]) != 0 :
+                States[:,:]=SaveStates[k,:,:]
+                x=1
+        x=0
     
     for g in range(0,dim):
+        print(np.sum(States_1[:N,0]))
         for i in range(0,N):
             if States[i,g]==1:
-                States[i,g]=int(random.random()>nu)
-                if States[i,(g-1)**2]!=1:
-                    States[i,(g-1)**2]=int(ExPr>=random.random())
+                States_1[i,g]=int(random.random()>nu)
+                if States[i,(g-1)**2] != 1 :
+                    if ExPr>random.random():
+                        States_1[i,(g-1)**2]=1
                 for j in range(0,N):
-                    if r[j,i]>random.random():
-                        States[j]=int(InPr>=random.random())
+                    if r[g*N+j,g*N+i]>random.random():
+                        States_1[j,g]=int(InPr>=random.random())
 
-        
+
     t=t+1
+#%%
+x=np.ones((N,N))
+
+x[:N,:N]=r[:N,:N]
+print(nx.is_connected(G1_2))
+#%%
+print(np.sum(States[:,0]))
+
 
 #%%
 
-plt.plot(rho[0:1000])
+def QSsimulation(N,gamma,eta,InPr,k1,k2):
+    dim=2
+    States=np.zeros((N,dim))
+    nu=1
+    ExPr=eta*InPr
+    M=1000
+    SaveStates=np.zeros((M,N,dim))
+    Prep=10**(-2)
+
+
+    G1_2=nx.erdos_renyi_graph(N,k1/N)
+    G2_2=nx.erdos_renyi_graph(N,k2/N)
+    while nx.is_connected(G1_2)!=True:
+          G1_2=nx.erdos_renyi_graph(N,k1/N)
+    while nx.is_connected(G2_2)!=True:
+          G2_2=nx.erdos_renyi_graph(N,k2/N)
+
+    A_1_2=nx.to_numpy_array(G1_2)
+    A_2_2=nx.to_numpy_array(G2_2)
+    r = build_supra_contact_matrix(A_1_2, A_2_2, eta, gamma)
+
+
+    States=np.zeros((N,dim))
+    SaveStates=np.zeros((M,N,dim))
+    States_1=np.zeros((N,dim))
+    States[0,1]=1
+    States[0,0]=1
+    t=0
+    States_1[:,:]=States[:,:]
+    Ftime=100
+    rho=np.ones(Ftime)
+    rho1=np.ones(Ftime)
+    rho2=np.ones(Ftime)
+    rhox2=np.ones(Ftime)
+    rhox21=np.ones(Ftime)
+    rhox22=np.ones(Ftime)   
+    x=0
+
+    while t<Ftime:
+        States[:,:]=States_1[:,:]
+        print(t)
+        rho[t]=np.sum(States)/(N*2)
+        rho1[t]=np.sum(States[:,0])/N
+        rho2[t]=np.sum(States[:,1])/N
+        rhox2[t]=(np.sum(States)/(N*2))**2
+        rhox21[t]=(np.sum(States[:,0])/N)**2
+        rhox22[t]=(np.sum(States[:,1])/N)**2
+
+        
+        if t<M:
+            SaveStates[t,:,:]=States[:,:]
+        if t>=M and random.random()<=Prep:
+            k=random.randint(0,M)
+            SaveStates[k,:,:]=States[:,:]
+        if rho[t]==0:
+            while x==0:
+                k=random.randint(0,M-1)
+                if np.sum(SaveStates[k,:,:]) != 0 :
+                    States[:,:]=SaveStates[k,:,:]
+                    x=1
+            x=0
+        
+        for g in range(0,dim):
+            for i in range(0,N):
+                if States[i,g]==1:
+                    States_1[i,g]=int(random.random()>nu)
+                    if States[i,(g-1)**2] != 1 :
+                        if ExPr>random.random():
+                            States_1[i,(g-1)**2]=1
+                    for j in range(0,N):
+                        if r[g*N+j,g*N+i]>random.random():
+                            States_1[j,g]=int(InPr>=random.random())
+
+            
+        t=t+1
+    rhoF=np.sum(rho[90:99])/10
+    rhoF1=np.sum(rho1[90:99])/10
+    rhoF2=np.sum(rho2[90:99])/10
+    sus=(np.sum(rhox2[90:99])/10-rhoF)/rhoF
+    sus1=(np.sum(rhox21[90:99])/10-rhoF1**2)/rhoF1
+    sus2=(np.sum(rhox22[90:99])/10-rhoF2**2)/rhoF2
+    plt.plot(rho1)
+    plt.plot(rho2)
+    plt.plot(rho)
+    return [rhoF,rhoF1,rhoF2,sus,sus1,sus2]
+#%%
+sims=20
+saves=np.zeros((sims,6))
+N=10000
+eta=0.01
+k1=30
+k2=10
+k=0
+gamma=10000
+i=1/5
+
+
+#for i in np.logspace(-2,0,sims):
+saves[k,:]=QSsimulation(N,gamma,eta,i,k1,k2)
+    #k=k+1
+
+#%%
+plt.plot(np.logspace(-2,0,20),saves[:,1])
+plt.plot(np.logspace(-2,0,20),saves[:,2])
+#plt.xscale('log')
+
